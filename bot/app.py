@@ -20,6 +20,9 @@ if __name__ == "__main__":
     slack_token = os.getenv("SLACK_TOKEN", "")
     logging.info("token: {}".format(slack_token))
 
+    config_root = os.getenv("CONFIG_ROOT", "configuration/")
+    logging.info("configuration root location: {}".format(config_root))
+
     if slack_token == "":
         logging.info("SLACK_TOKEN env var not set, expecting token to be provided by Resourcer events")
         slack_token = None
@@ -28,5 +31,5 @@ if __name__ == "__main__":
         res.start()
     else:
         # only want to run a single instance of the bot in dev mode
-        bot = SlackBot(slack_token)
+        bot = SlackBot(slack_token, config_root)
         bot.start({})

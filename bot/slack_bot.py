@@ -5,6 +5,7 @@ import traceback
 from slack_clients import SlackClients
 from messenger import Messenger
 from event_handler import RtmEventHandler
+from configurator import Configurator
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ def spawn_bot():
 
 
 class SlackBot(object):
-    def __init__(self, token=None):
+    def __init__(self, token=None, configuration_root=None):
         """Creates Slacker Web and RTM clients with API Bot User token.
 
         Args:
@@ -22,6 +23,7 @@ class SlackBot(object):
         """
         self.last_ping = 0
         self.keep_running = True
+        self.configuration = configuration_root
         if token is not None:
             self.clients = SlackClients(token)
 
@@ -45,7 +47,8 @@ class SlackBot(object):
                 self.clients.rtm.server.domain))
 
             msg_writer = Messenger(self.clients)
-            event_handler = RtmEventHandler(self.clients, msg_writer)
+            configurator = Configurator(self.configuration)
+            event_handler = RtmEventHandler(self.clients, msg_writer, configurator)
 
             while self.keep_running:
                 for event in self.clients.rtm.rtm_read():

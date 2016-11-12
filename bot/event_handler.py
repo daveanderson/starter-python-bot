@@ -6,9 +6,10 @@ logger = logging.getLogger(__name__)
 
 
 class RtmEventHandler(object):
-    def __init__(self, slack_clients, msg_writer):
+    def __init__(self, slack_clients, msg_writer, configurator):
         self.clients = slack_clients
         self.msg_writer = msg_writer
+        self.configurator = configurator
 
     def handle(self, event):
 
@@ -37,18 +38,27 @@ class RtmEventHandler(object):
         if ('user' in event) and (not self.clients.is_message_from_me(event['user'])):
 
             msg_txt = event['text']
+            current_channel = event['channel']
+            current_user = event['user']
 
             if self.clients.is_bot_mention(msg_txt):
-                # e.g. user typed: "@pybot tell me a joke!"
                 if 'help' in msg_txt:
-                    self.msg_writer.write_help_message(event['channel'])
+                    self.msg_writer.write_help_message(current_channel)
                 elif re.search('hi|hey|hello|howdy', msg_txt):
-                    self.msg_writer.write_greeting(event['channel'], event['user'])
-                elif 'joke' in msg_txt:
-                    self.msg_writer.write_joke(event['channel'])
+                    self.msg_writer.write_greeting(current_channel, current_user)
                 elif 'attachment' in msg_txt:
-                    self.msg_writer.demo_attachment(event['channel'])
-                elif 'echo' in msg_txt:
-                    self.msg_writer.send_message(event['channel'], msg_txt)
+                    self.msg_writer.demo_attachment(current_channel)
+                elif 'create' in msg_txt:
+                    self.configurator.create_configuration(current_user, current_channel, self.msg_writer)
+                elif 'start' in msg_txt:
+                    print event
+                    self.msg_writer.send_message(current_channel, "So, you want to start the tunnel, eh?")
+                    response = self.configurator.start_container(current_user, current_channel, self.msg_writer)
+                    self.msg_writer.send_message(current_channel, response)
+                elif 'stop' in msg_txt:
+                    self.msg_writer.send_message(current_channel, "I'll see about shutting down the tunnel...")
+                    self.configurator.stop_container(current_user, current_channel, self.msg_writer)
+                elif 'status' in msg_txt:
+                    self.configurator.container_status(current_user, current_channel, self.msg_writer)
                 else:
-                    self.msg_writer.write_prompt(event['channel'])
+                    self.msg_writer.write_prompt(current_channel)
