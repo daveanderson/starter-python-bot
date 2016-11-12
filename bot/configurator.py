@@ -9,14 +9,14 @@ class Configurator(object):
     """
     Configurator performs file operations
     """
-    def __init__(self, configuration_root):
+    def __init__(self, host_configuration_root, configuration_root):
         super(Configurator, self).__init__()
+        self.host_config_root = host_configuration_root
         self.config_root = configuration_root
         self.cli = Client(base_url='unix://var/run/docker.sock')
-        if os.path.isdir(self.config_root):
-            os.chdir(self.config_root)
-        else:
+        if not os.path.isdir(self.config_root):
             print "Error: the configuration folder `" + self.config_root + "` does not exist."
+            return
         
         # make sure we have the latest ssh to vpn bridge image
         self.cli.pull(image_name)
@@ -26,15 +26,14 @@ class Configurator(object):
     def create_configuration(self, user, channel, msg_writer):
         """create_configuration will create the base"""
         
-        (success, target_dir) = self._check_configuration(user, channel, msg_writer)
+        (success, target_dir, host_target_dir) = self._check_configuration(user, channel, msg_writer)
         if success:
             return
         # create the folder for this user
         if not os.path.exists(target_dir):
             os.makedirs(target_dir)
         
-        current_dir = os.getcwd()
-        base_dir = os.path.join(current_dir, "base")        
+        base_dir = os.path.join(self.config_root, "base")        
         if not os.path.exists(base_dir):
             msg_writer.send_message(channel, "Sorry, I'm missing the folder `base` that contains the base for each tunnel configuration. I can't create a tunnel for you. Please contact a human to investigate.")
             return
@@ -45,7 +44,7 @@ class Configurator(object):
     def start_container(self, user, channel, msg_writer):
         """start_container starts a container for the user"""
         
-        (success, target_dir) = self._check_configuration(user, channel, msg_writer)
+        (success, target_dir, host_target_dir) = self._check_configuration(user, channel, msg_writer)
         if not success:
             return "Failed to start tunnel."
         
@@ -53,7 +52,7 @@ class Configurator(object):
         action = ""
         if len(containers) == 0:
             msg_writer.send_message(channel, "Okay, I don't already have a tunnel for " + user + ", so I'll create one!")
-            host_config = self.cli.create_host_config(cap_add=["NET_ADMIN"], devices=["/dev/net/tun"], port_bindings={22: 30022}, binds={target_dir: {"bind": "/vpn", "mode": "rw"}})
+            host_config = self.cli.create_host_config(cap_add=["NET_ADMIN"], devices=["/dev/net/tun"], port_bindings={22: 30022}, binds={host_target_dir: {"bind": "/vpn", "mode": "rw"}})
             container = self.cli.create_container(image=image_name, detach=True, volumes=["/vpn"], name=user, ports=[22], host_config=host_config)
             response = self.cli.start(container=container.get('Id'))
             container = self.cli.containers(all=True, filters={"name": user})[0]
@@ -73,7 +72,7 @@ class Configurator(object):
     def stop_container(self, user, channel, msg_writer):
         """stop_container stops a container for the user"""
         
-        (success, target_dir) = self._check_configuration(user, channel, msg_writer)
+        (success, target_dir, host_target_dir) = self._check_configuration(user, channel, msg_writer)
         if not success:
             return
         
@@ -92,7 +91,7 @@ class Configurator(object):
 
     def container_status(self, user, channel, msg_writer):
         """docstring for container_status"""
-        (success, target_dir) = self._check_configuration(user, channel, msg_writer)
+        (success, target_dir, host_target_dir) = self._check_configuration(user, channel, msg_writer)
         if not success:
             return
         self._status(user, channel, msg_writer)
@@ -100,14 +99,14 @@ class Configurator(object):
     def _check_configuration(self, user, channel, msg_writer):
         """_check_configuration checks if we have a container for this user"""
         
-        current_dir = os.getcwd()
-        target_dir = os.path.join(current_dir, user)
+        target_dir = os.path.join(self.config_root, user)
+        host_target_dir = os.path.join(self.host_config_root, user)
         if os.path.isdir(target_dir):
             msg_writer.send_message(channel, "Sweet, I have the configuration directory for " + user + ".")
-            return (True, target_dir)
+            return (True, target_dir, host_target_dir)
         else:
             msg_writer.send_message(channel, "Sorry, I'm missing the configuration folder for " + user + ".\nIf you have VPN credentials, you can tell me to `create` and I'll create most of your configuration. A human you trust will have to put the secure bits (`id_rsa.pub` and VPN credentials) in place...")
-            return (False, target_dir)
+            return (False, target_dir, host_target_dir)
     
     def _status(self, user, channel, msg_writer):
         """looks up and outputs the status of the container for the user"""
