@@ -38,7 +38,7 @@ class Configurator(object):
             msg_writer.send_message(channel, "Sorry, I'm missing the folder `base` that contains the base for each tunnel configuration. I can't create a tunnel for you. Please contact a human to investigate.")
             return
         copy_tree(base_dir, target_dir)
-        msg_writer.send_message(channel, "Ok, your base configuration exists. Please contact a human to put your `id_rsa.pub` and VPN credentials (`vpn.auth`) in place.")
+        msg_writer.send_message(channel, "Ok, your base configuration exists. Please contact a human to put your `id_rsa.pub` and VPN credentials (`vpn.auth`) in place and to define the port you'll use.")
         
 
     def start_container(self, user, channel, msg_writer):
@@ -52,7 +52,8 @@ class Configurator(object):
         action = ""
         if len(containers) == 0:
             msg_writer.send_message(channel, "Okay, I don't already have a tunnel for " + user + ", so I'll create one!")
-            host_config = self.cli.create_host_config(cap_add=["NET_ADMIN"], devices=["/dev/net/tun"], port_bindings={22: 30022}, binds={host_target_dir: {"bind": "/vpn", "mode": "rw"}})
+            target_port = self._target_port(user, channel, msg_writer)
+            host_config = self.cli.create_host_config(cap_add=["NET_ADMIN"], devices=["/dev/net/tun"], port_bindings={22: target_port}, binds={host_target_dir: {"bind": "/vpn", "mode": "rw"}})
             container = self.cli.create_container(image=image_name, detach=True, volumes=["/vpn"], name=user, ports=[22], host_config=host_config)
             response = self.cli.start(container=container.get('Id'))
             container = self.cli.containers(all=True, filters={"name": user})[0]
@@ -105,7 +106,7 @@ class Configurator(object):
             msg_writer.send_message(channel, "Sweet, I have the configuration directory for " + user + ".")
             return (True, target_dir, host_target_dir)
         else:
-            msg_writer.send_message(channel, "Sorry, I'm missing the configuration folder for " + user + ".\nIf you have VPN credentials, you can tell me to `create` and I'll create most of your configuration. A human you trust will have to put the secure bits (`id_rsa.pub` and VPN credentials) in place...")
+            msg_writer.send_message(channel, "Sorry, I'm missing the configuration folder for " + user + ".\nIf you have VPN credentials, you can tell me to `create` and I'll create most of your configuration. A human you trust will have to put the secure bits (`id_rsa.pub` and VPN credentials) in place and define the port you'll use...")
             return (False, target_dir, host_target_dir)
     
     def _status(self, user, channel, msg_writer):
@@ -121,3 +122,29 @@ class Configurator(object):
             if len(ports) > 0:
                 port = str(ports[0].get("PublicPort"))
             msg_writer.send_message(channel, "Tunnel for " + user + ".\n> Port: " + port + "\n> Status: " + status)
+
+    def _target_port(self, user, channel, msg_writer):
+        """_target_port attempt to look up the port that should be used for this user"""
+        
+        msg_writer.send_message(channel, "Going to see if I can figure out which `port` you will use.")
+        
+        target_dir = os.path.join(self.config_root, user)
+        port_file = os.path.join(target_dir, "port")
+        
+        lines = open(port_file).read().splitlines()
+        if len(lines) == 0:
+            msg_writer.send_message(channel, "Sorry, I wasn't able to look up the port number for " + user + ".\nPlease contact a human you trust to make sure that a port number is defined. i.e the file `port` contains a single port number (`30022`).")
+            return "30022"
+        port_string = lines[0]
+        try:
+            port = int(port_string)
+            if port < 1024:
+                msg_writer.send_message(channel, "Sorry, I the port number " + str(port) + " for " + user + " is in the restricted range.\nPlease contact a human you trust to make sure that a port between 1024 and 65535 is defined in the file `port`.")
+                return "30022"
+        except ValueError:
+            msg_writer.send_message(channel, "ValueError.")
+            port = 30022
+        port_string = str(port)
+        msg_writer.send_message(channel, "I believe you will be connecting to port `" + port_string + "`.")
+        
+        return port_string
