@@ -26,7 +26,7 @@ class Messenger(object):
             "> `<@" + bot_uid + "> create` - I'll put most of the configuration you need in place. :rose:",
             "> `<@" + bot_uid + "> start` - I'll start a tunnel for you. :rocket:",
             "> `<@" + bot_uid + "> stop` - I'll stop the tunnel if one exists. :no_entry_sign:",
-            "> `<@" + bot_uid + "> status` - I'll give you some status about your tunnel. :question:"
+            "> `<@" + bot_uid + "> status` - I'll give you some status about your tunnel. :question:")
         self.send_message(channel_id, txt)
 
     def write_greeting(self, channel_id, user_id):

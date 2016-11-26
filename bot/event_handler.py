@@ -67,4 +67,4 @@ class RtmEventHandler(object):
         Args:
             channel (str): Channel in which a message was received
         """
-        return channel.startswith('D'):
+        return channel.startswith('D')
