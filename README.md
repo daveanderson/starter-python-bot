@@ -24,42 +24,19 @@ Things are looking good if the console prints something like:
 
 If you want change the logging level, prepend `export LOG_LEVEL=<your level>; ` to the `python ./bot/app.py` command.
 
+
 ### Run locally in Docker
-	docker build -t starter-python-bot .
-	docker run --rm -it -e SLACK_TOKEN=<YOUR SLACK API TOKEN> starter-python-bot
+	docker build -t tunnelbot .
+	# docker build -t electrobarn/tunnelbot .
+	# docker tag <identifier> electrobarn/tunnelbot:latest
+	# docker push electrobarn/tunnelbot
+	docker run --rm -it -e SLACK_TOKEN=<YOUR SLACK API TOKEN> -e HOST_CONFIG_ROOT=/Users/username/Documents/tunnelbot/config -e CONFIG_ROOT=/config -v /Users/username/Documents/tunnelbot/config:/config -v /var/run/docker.sock:/var/run/docker.sock electrobarn/tunnelbot
 
 ### Run in BeepBoop
-If you have linked your local repo with the Beep Boop service (check [here](https://beepboophq.com/0_o/my-projects)), changes pushed to the remote master branch will automatically deploy.
+Probably not going to work on BeepBoop
 
 ### First Conversations
-When you go through the `Add your App to Slack` flow, you'll setup a new Bot User and give them a handle (like @python-rtmbot).
-
-Here is an example interaction dialog that works with this bot:
-```
-Joe Dev [3:29 PM]
-hi @python-rtmbot
-
-Slacks PythonBot BOT [3:29 PM]
-Nice to meet you, @randall.barnhart!
-
-Joe Dev [3:30 PM]
-help @python-rtmbot
-
-Slacks PythonBot BOT [3:30 PM]
-I'm your friendly Slack bot written in Python.  I'll ​*​_respond_​*​ to the following commands:
->`hi @python-rtmbot` - I'll respond with a randomized greeting mentioning your user. :wave:
-> `@python-rtmbot joke` - I'll tell you one of my finest jokes, with a typing pause for effect. :laughing:
-> `@python-rtmbot attachment` - I'll demo a post with an attachment using the Web API. :paperclip:
-
-Joe Dev [3:31 PM]
-@python-rtmbot: joke
-
-Slacks PythonBot BOT [3:31 PM]
-Why did the python cross the road?
-
-[3:31]
-To eat the chicken on the other side! :laughing:
-```
+TODO
 
 ## Code Organization
 If you want to add or change an event that the bot responds (e.g. when the bot is mentioned, when the bot joins a channel, when a user types a message, etc.), you can modify the `_handle_by_type` method in `event_handler.py`.

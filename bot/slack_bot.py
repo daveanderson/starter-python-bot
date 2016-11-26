@@ -52,7 +52,12 @@ class SlackBot(object):
             event_handler = RtmEventHandler(self.clients, msg_writer, configurator)
 
             while self.keep_running:
-                for event in self.clients.rtm.rtm_read():
+                
+                events = self.clients.rtm.rtm_read()
+                if events is None:
+                    logger.info('Reconnecting...')
+                    continue
+                for event in events:
                     try:
                         event_handler.handle(event)
                     except:

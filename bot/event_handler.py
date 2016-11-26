@@ -41,13 +41,11 @@ class RtmEventHandler(object):
             current_channel = event['channel']
             current_user = event['user']
 
-            if self.clients.is_bot_mention(msg_txt):
+            if self.clients.is_bot_mention(msg_txt) or self._is_direct_message(current_channel):
                 if 'help' in msg_txt:
                     self.msg_writer.write_help_message(current_channel)
                 elif re.search('hi|hey|hello|howdy', msg_txt):
                     self.msg_writer.write_greeting(current_channel, current_user)
-                elif 'attachment' in msg_txt:
-                    self.msg_writer.demo_attachment(current_channel)
                 elif 'create' in msg_txt:
                     self.configurator.create_configuration(current_user, current_channel, self.msg_writer)
                 elif 'start' in msg_txt:
@@ -62,3 +60,11 @@ class RtmEventHandler(object):
                     self.configurator.container_status(current_user, current_channel, self.msg_writer)
                 else:
                     self.msg_writer.write_prompt(current_channel)
+
+    def _is_direct_message(self, channel):
+        """Check if channel is a direct message channel
+
+        Args:
+            channel (str): Channel in which a message was received
+        """
+        return channel.startswith('D'):
